@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Details — EventPass Admin</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/js/toast.js" defer></script>
+  <script src="/js/gallery.js" defer></script>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="url(#g1)" stroke-width="2"/><path d="M8 4v16M16 4v16" stroke="url(#g1)" stroke-width="1.5" stroke-dasharray="2 2"/><defs><linearGradient id="g1" x1="2" y1="4" x2="22" y2="20"><stop stop-color="#7c5cbf"/><stop offset="1" stop-color="#e8a838"/></linearGradient></defs></svg>
+      EventPass
+    </a>
+    <div class="admin-info">
+      <span style="color:var(--text-muted); font-size:0.85rem;">Admin Panel</span>
+      <div class="avatar">G</div>
+      <span style="color:var(--text); font-size:0.9rem; font-weight:500;">gracy</span>
+      <button class="btn btn-ghost" style="font-size:0.85rem;" id="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">Admin Panel</div>
+      <nav>
+        <a href="/admin/dashboard.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+          Dashboard
+        </a>
+        <a href="/admin/create.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Create Event
+        </a>
+        <a href="#" id="sidebar-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Logout
+        </a>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <a href="/admin/dashboard.html" class="back-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to Dashboard
+      </a>
+
+      <div id="loading" class="loading-spinner"></div>
+
+      <!-- Event Info Card -->
+      <div id="event-detail" class="event-detail" style="display:none;">
+        <h1 id="event-name"></h1>
+        <div class="pills-row" id="event-pills"></div>
+        <div class="description" id="event-description"></div>
+      </div>
+
+      <!-- Gallery -->
+      <div id="gallery-container" style="display:none; margin-bottom:2rem;"></div>
+
+      <!-- Bookings Section -->
+      <div id="bookings-section" style="display:none;">
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+          <h2 style="font-family:var(--font-heading);">Bookings</h2>
+          <span class="pill" id="bookings-count-badge" style="font-size:0.82rem;"></span>
+          <button class="btn btn-secondary" style="margin-left:auto; font-size:0.82rem; padding:0.4rem 0.85rem;" id="export-csv-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div style="overflow-x:auto;" id="bookings-table-wrap"></div>
+      </div>
+
+      <div id="bookings-empty" class="empty-state" style="display:none;">
+        <p>No bookings for this event yet.</p>
+      </div>
+
+      <!-- Error -->
+      <div id="error-state" class="empty-state" style="display:none;">
+        <p id="error-text">Event not found.</p>
+        <a href="/admin/dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Auth check
+    fetch('/api/admin/check').then(function(r) { if (!r.ok) window.location.href = '/admin/login.html'; });
+
+    // Logout
+    async function doLogout() {
+      await fetch('/api/admin/logout', { method:'POST' });
+      window.location.href = '/admin/login.html';
+    }
+    document.getElementById('logout-btn').addEventListener('click', doLogout);
+    document.getElementById('sidebar-logout').addEventListener('click', function(e) { e.preventDefault(); doLogout(); });
+
+    var params = new URLSearchParams(window.location.search);
+    var eventId = params.get('id');
+    var loadingDiv = document.getElementById('loading');
+    var errorState = document.getElementById('error-state');
+    var bookingsData = [];
+
+    if (!eventId) {
+      loadingDiv.style.display = 'none';
+      errorState.style.display = 'block';
+      document.getElementById('error-text').textContent = 'No event ID specified.';
+    } else {
+      loadEventDetail();
+    }
+
+    async function loadEventDetail() {
+      try {
+        var res = await fetch('/api/events/' + eventId);
+        var json = await res.json();
+        loadingDiv.style.display = 'none';
+
+        if (!json.success) {
+          errorState.style.display = 'block';
+          document.getElementById('error-text').textContent = json.message || 'Event not found.';
+          return;
+        }
+
+        var event = json.data;
+        document.title = event.name + ' — EventPass Admin';
+        document.getElementById('event-name').textContent = event.name;
+        document.getElementById('event-description').textContent = event.description;
+
+        var seatColor = event.available_seats > 20 ? 'var(--success)' : event.available_seats > 0 ? 'var(--accent)' : 'var(--error)';
+        var seatsText = event.available_seats > 0 ? event.available_seats + ' / ' + event.total_seats + ' available' : 'Sold Out';
+        document.getElementById('event-pills').innerHTML =
+          '<span class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> ' + formatDate(event.date) + '</span>' +
+          '<span class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="2"/></svg> ' + escapeHTML(event.location) + '</span>' +
+          '<span class="pill" style="background:rgba(255,255,255,0.05);color:' + seatColor + '">' + seatsText + '</span>';
+
+        document.getElementById('event-detail').style.display = 'block';
+
+        // Gallery
+        if (event.images && event.images.length > 0) {
+          document.getElementById('gallery-container').style.display = 'block';
+          initGallery('gallery-container', event.images);
+        }
+
+        // Load bookings
+        loadBookings();
+
+      } catch(err) {
+        loadingDiv.style.display = 'none';
+        errorState.style.display = 'block';
+        document.getElementById('error-text').textContent = 'Could not connect to server.';
+        console.error(err);
+      }
+    }
+
+    async function loadBookings() {
+      try {
+        var res = await fetch('/api/events/' + eventId + '/bookings');
+        var json = await res.json();
+
+        if (!json.success || !json.data || json.data.length === 0) {
+          document.getElementById('bookings-empty').style.display = 'block';
+          return;
+        }
+
+        bookingsData = json.data;
+        var section = document.getElementById('bookings-section');
+        section.style.display = 'block';
+        document.getElementById('bookings-count-badge').textContent = bookingsData.length + ' total';
+
+        var html = '<table class="data-table"><thead><tr>' +
+          '<th>Booking ID</th><th>Attendee Name</th><th>Email</th><th>Passes</th><th>Booked At</th>' +
+          '</tr></thead><tbody>';
+
+        bookingsData.forEach(function(b) {
+          html += '<tr>' +
+            '<td class="mono">' + escapeHTML(b.id) + '</td>' +
+            '<td style="color:var(--text); font-weight:500;">' + escapeHTML(b.attendee_name) + '</td>' +
+            '<td>' + escapeHTML(b.email) + '</td>' +
+            '<td>' + b.num_passes + '</td>' +
+            '<td>' + formatDateTime(b.created_at) + '</td>' +
+            '</tr>';
+        });
+
+        html += '</tbody></table>';
+        document.getElementById('bookings-table-wrap').innerHTML = html;
+
+      } catch(err) {
+        console.error('Failed to load bookings:', err);
+      }
+    }
+
+    // Export CSV
+    document.getElementById('export-csv-btn').addEventListener('click', function() {
+      if (!bookingsData || bookingsData.length === 0) {
+        showToast('No bookings to export.', 'info');
+        return;
+      }
+      var csv = 'Booking ID,Attendee Name,Email,Passes,Booked At\n';
+      bookingsData.forEach(function(b) {
+        csv += '"' + b.id + '","' + b.attendee_name + '","' + b.email + '",' + b.num_passes + ',"' + b.created_at + '"\n';
+      });
+      var blob = new Blob([csv], { type:'text/csv' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'bookings_event_' + eventId + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('CSV exported!', 'success');
+    });
+
+    function formatDate(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    }
+    function formatDateTime(dtStr) {
+      if (!dtStr) return '—';
+      var d = new Date(dtStr);
+      if (isNaN(d.getTime())) return dtStr;
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) + ' ' +
+             d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    }
+    function escapeHTML(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

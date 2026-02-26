@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — EventPass</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/js/toast.js" defer></script>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="url(#g1)" stroke-width="2"/><path d="M8 4v16M16 4v16" stroke="url(#g1)" stroke-width="1.5" stroke-dasharray="2 2"/><defs><linearGradient id="g1" x1="2" y1="4" x2="22" y2="20"><stop stop-color="#7c5cbf"/><stop offset="1" stop-color="#e8a838"/></linearGradient></defs></svg>
+      EventPass
+    </a>
+    <nav>
+      <a href="/">Events</a>
+    </nav>
+  </header>
+
+  <div class="login-page">
+    <div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="login-card" id="login-card">
+      <div class="login-logo">Admin Panel</div>
+      <form id="login-form">
+        <div class="float-group">
+          <input type="text" id="username" placeholder=" " required autocomplete="username">
+          <label for="username">Username</label>
+        </div>
+        <div class="float-group">
+          <input type="password" id="password" placeholder=" " required autocomplete="current-password">
+          <label for="password">Password</label>
+          <button type="button" class="toggle-pw" id="toggle-pw">Show</button>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;" id="login-btn">
+          <span>Sign In</span>
+          <div class="spinner"></div>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Check if already logged in
+    fetch('/api/admin/check').then(function(r) {
+      if (r.ok) window.location.href = '/admin/dashboard.html';
+    });
+
+    // Toggle password visibility
+    document.getElementById('toggle-pw').addEventListener('click', function() {
+      var pw = document.getElementById('password');
+      if (pw.type === 'password') {
+        pw.type = 'text'; this.textContent = 'Hide';
+      } else {
+        pw.type = 'password'; this.textContent = 'Show';
+      }
+    });
+
+    // Login form
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var btn = document.getElementById('login-btn');
+      if (btn.classList.contains('loading')) return;
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      var payload = {
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value
+      };
+
+      try {
+        var res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var json = await res.json();
+
+        if (json.success) {
+          window.location.href = '/admin/dashboard.html';
+        } else {
+          showToast(json.message || 'Login failed.', 'error');
+          var card = document.getElementById('login-card');
+          card.classList.add('shake');
+          setTimeout(function() { card.classList.remove('shake'); }, 500);
+        }
+      } catch (err) {
+        showToast('Could not connect to server.', 'error');
+        console.error(err);
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

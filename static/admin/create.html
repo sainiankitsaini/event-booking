@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Event — EventPass Admin</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/js/toast.js" defer></script>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="url(#g1)" stroke-width="2"/><path d="M8 4v16M16 4v16" stroke="url(#g1)" stroke-width="1.5" stroke-dasharray="2 2"/><defs><linearGradient id="g1" x1="2" y1="4" x2="22" y2="20"><stop stop-color="#7c5cbf"/><stop offset="1" stop-color="#e8a838"/></linearGradient></defs></svg>
+      EventPass
+    </a>
+    <div class="admin-info">
+      <span style="color:var(--text-muted); font-size:0.85rem;">Admin Panel</span>
+      <div class="avatar">G</div>
+      <span style="color:var(--text); font-size:0.9rem; font-weight:500;">gracy</span>
+      <button class="btn btn-ghost" style="font-size:0.85rem;" id="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">Admin Panel</div>
+      <nav>
+        <a href="/admin/dashboard.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+          Dashboard
+        </a>
+        <a href="/admin/create.html" class="active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Create Event
+        </a>
+        <a href="#" id="sidebar-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Logout
+        </a>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <h1 class="page-title">Create a New Event</h1>
+      <p class="page-subtitle">Fill in the details and upload images for your event.</p>
+
+      <div class="form-container" style="max-width:720px;">
+        <form id="create-form">
+          <!-- Section 1: Basic Info -->
+          <div class="form-section">
+            <div class="form-section-title">Basic Information</div>
+            <div class="form-group">
+              <label for="name">Event Name</label>
+              <input type="text" id="name" placeholder="e.g. Tech Conference 2026" required>
+              <div class="form-error" id="name-error"></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" required>
+                <div class="form-error" id="date-error"></div>
+              </div>
+              <div class="form-group">
+                <label for="total_seats">Total Seats</label>
+                <input type="number" id="total_seats" min="1" max="10000" placeholder="e.g. 100" required>
+                <div class="form-error" id="seats-error"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="location">Location</label>
+              <input type="text" id="location" placeholder="e.g. Convention Center, Mumbai" required>
+              <div class="form-error" id="location-error"></div>
+            </div>
+          </div>
+
+          <!-- Section 2: Description -->
+          <div class="form-section">
+            <div class="form-section-title">Description</div>
+            <div class="form-group">
+              <label for="description">Event Description</label>
+              <textarea id="description" placeholder="Tell people what this event is about..." maxlength="2000" required></textarea>
+              <div class="char-counter"><span id="char-count">0</span> / 2000</div>
+              <div class="form-error" id="desc-error"></div>
+            </div>
+          </div>
+
+          <!-- Section 3: Images -->
+          <div class="form-section">
+            <div class="form-section-title">Event Images</div>
+            <div class="upload-zone" id="upload-zone">
+              <div class="upload-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <p>Drag & drop images here or click to browse</p>
+              <div class="upload-hint">JPG, JPEG, PNG, WEBP — Min 5, Max 10 images</div>
+            </div>
+            <input type="file" id="file-input" multiple accept=".jpg,.jpeg,.png,.webp" style="display:none;">
+            <div class="upload-counter" id="upload-counter" style="display:none;"></div>
+            <div class="upload-previews" id="upload-previews"></div>
+            <div class="form-error" id="images-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%; padding:0.85rem;" id="submit-btn">
+            <span>Publish Event</span>
+            <div class="spinner"></div>
+          </button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Auth check
+    fetch('/api/admin/check').then(function(r) { if (!r.ok) window.location.href = '/admin/login.html'; });
+
+    // Logout
+    async function doLogout() {
+      await fetch('/api/admin/logout', { method:'POST' });
+      window.location.href = '/admin/login.html';
+    }
+    document.getElementById('logout-btn').addEventListener('click', doLogout);
+    document.getElementById('sidebar-logout').addEventListener('click', function(e) { e.preventDefault(); doLogout(); });
+
+    // Character counter
+    var descEl = document.getElementById('description');
+    var charCount = document.getElementById('char-count');
+    descEl.addEventListener('input', function() {
+      charCount.textContent = this.value.length;
+    });
+
+    // Image upload state
+    var selectedFiles = [];
+    var uploadZone = document.getElementById('upload-zone');
+    var fileInput = document.getElementById('file-input');
+    var previewsEl = document.getElementById('upload-previews');
+    var counterEl = document.getElementById('upload-counter');
+
+    uploadZone.addEventListener('click', function() { fileInput.click(); });
+    uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+    uploadZone.addEventListener('drop', function(e) {
+      e.preventDefault(); this.classList.remove('dragover');
+      addFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', function() { addFiles(this.files); this.value = ''; });
+
+    function addFiles(fileList) {
+      var allowed = ['.jpg', '.jpeg', '.png', '.webp'];
+      for (var i = 0; i < fileList.length; i++) {
+        if (selectedFiles.length >= 10) break;
+        var f = fileList[i];
+        var ext = f.name.toLowerCase().substring(f.name.lastIndexOf('.'));
+        if (allowed.indexOf(ext) === -1) {
+          showToast('Invalid format: ' + f.name + '. Use JPG, PNG, or WEBP.', 'error');
+          continue;
+        }
+        selectedFiles.push(f);
+      }
+      renderPreviews();
+    }
+
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      previewsEl.innerHTML = '';
+      if (selectedFiles.length === 0) {
+        counterEl.style.display = 'none';
+        return;
+      }
+      counterEl.style.display = 'block';
+      counterEl.textContent = selectedFiles.length + ' / 10 images added';
+      if (selectedFiles.length < 5) {
+        counterEl.style.color = 'var(--error)';
+        counterEl.textContent += ' (need at least 5)';
+      } else {
+        counterEl.style.color = 'var(--success)';
+      }
+
+      selectedFiles.forEach(function(file, idx) {
+        var div = document.createElement('div');
+        div.className = 'upload-preview';
+        var img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        var btn = document.createElement('button');
+        btn.className = 'remove-btn';
+        btn.innerHTML = '&times;';
+        btn.onclick = function() { removeFile(idx); };
+        div.appendChild(img);
+        div.appendChild(btn);
+        previewsEl.appendChild(div);
+      });
+    }
+
+    // Form validation helpers
+    function showFieldError(id, msg) {
+      var el = document.getElementById(id);
+      el.textContent = msg; el.classList.add('show');
+    }
+    function clearErrors() {
+      document.querySelectorAll('.form-error').forEach(function(el) {
+        el.textContent = ''; el.classList.remove('show');
+      });
+    }
+
+    // Form submission
+    document.getElementById('create-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      clearErrors();
+      var valid = true;
+
+      var name = document.getElementById('name').value.trim();
+      var date = document.getElementById('date').value;
+      var location = document.getElementById('location').value.trim();
+      var totalSeats = document.getElementById('total_seats').value;
+      var description = document.getElementById('description').value.trim();
+
+      if (!name) { showFieldError('name-error', 'Event name is required.'); valid = false; }
+      if (!date) { showFieldError('date-error', 'Date is required.'); valid = false; }
+      if (!location) { showFieldError('location-error', 'Location is required.'); valid = false; }
+      if (!totalSeats || parseInt(totalSeats) <= 0) { showFieldError('seats-error', 'Enter a valid seat count.'); valid = false; }
+      if (!description) { showFieldError('desc-error', 'Description is required.'); valid = false; }
+      if (selectedFiles.length < 5) { showFieldError('images-error', 'Please upload at least 5 images.'); valid = false; }
+      if (selectedFiles.length > 10) { showFieldError('images-error', 'Maximum 10 images allowed.'); valid = false; }
+      if (!valid) return;
+
+      var btn = document.getElementById('submit-btn');
+      if (btn.classList.contains('loading')) return;
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      var formData = new FormData();
+      formData.append('name', name);
+      formData.append('description', description);
+      formData.append('date', date);
+      formData.append('location', location);
+      formData.append('total_seats', totalSeats);
+      selectedFiles.forEach(function(f) { formData.append('images', f); });
+
+      try {
+        var res = await fetch('/api/events', { method:'POST', body: formData });
+        var json = await res.json();
+        if (json.success) {
+          showToast('Event created successfully!', 'success');
+          setTimeout(function() {
+            window.location.href = '/admin/event.html?id=' + json.data.id;
+          }, 1200);
+        } else {
+          showToast(json.message || 'Failed to create event.', 'error');
+        }
+      } catch(err) {
+        showToast('Could not connect to server.', 'error');
+        console.error(err);
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

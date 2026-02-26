@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — EventPass</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/js/toast.js" defer></script>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="url(#g1)" stroke-width="2"/><path d="M8 4v16M16 4v16" stroke="url(#g1)" stroke-width="1.5" stroke-dasharray="2 2"/><defs><linearGradient id="g1" x1="2" y1="4" x2="22" y2="20"><stop stop-color="#7c5cbf"/><stop offset="1" stop-color="#e8a838"/></linearGradient></defs></svg>
+      EventPass
+    </a>
+    <div class="admin-info">
+      <span style="color:var(--text-muted); font-size:0.85rem;">Admin Panel</span>
+      <div class="avatar" id="avatar-initial">G</div>
+      <span style="color:var(--text); font-size:0.9rem; font-weight:500;" id="admin-name">gracy</span>
+      <button class="btn btn-ghost" style="font-size:0.85rem;" id="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">Admin Panel</div>
+      <nav>
+        <a href="/admin/dashboard.html" class="active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+          Dashboard
+        </a>
+        <a href="/admin/create.html">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Create Event
+        </a>
+        <a href="#" id="sidebar-logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Logout
+        </a>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-subtitle">Overview of your events and bookings.</p>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Events</div>
+          <div class="stat-value" id="stat-events">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Bookings</div>
+          <div class="stat-value" id="stat-bookings">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Seats Sold</div>
+          <div class="stat-value" id="stat-seats">—</div>
+        </div>
+      </div>
+
+      <!-- Events Table -->
+      <h2 style="font-family:var(--font-heading); margin-bottom:1rem;">All Events</h2>
+      <div id="events-loading" class="loading-spinner"></div>
+      <div style="overflow-x:auto;" id="events-table-wrap" style="display:none;"></div>
+      <div id="events-empty" class="empty-state" style="display:none;">
+        <p>No events yet.</p>
+        <a href="/admin/create.html" class="btn btn-primary">Create your first event</a>
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <a href="/admin/create.html" class="fab" title="Create Event">+</a>
+  </div>
+
+  <script>
+    // Auth check
+    async function checkAuth() {
+      try {
+        var res = await fetch('/api/admin/check');
+        if (!res.ok) { window.location.href = '/admin/login.html'; return false; }
+        return true;
+      } catch(e) { window.location.href = '/admin/login.html'; return false; }
+    }
+
+    // Logout
+    async function doLogout() {
+      await fetch('/api/admin/logout', { method:'POST' });
+      window.location.href = '/admin/login.html';
+    }
+    document.getElementById('logout-btn').addEventListener('click', doLogout);
+    document.getElementById('sidebar-logout').addEventListener('click', function(e) { e.preventDefault(); doLogout(); });
+
+    // Animated counter
+    function animateCounter(el, target) {
+      var start = 0;
+      var duration = 600;
+      var startTime = null;
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        var progress = Math.min((ts - startTime) / duration, 1);
+        el.textContent = Math.floor(progress * target);
+        if (progress < 1) requestAnimationFrame(step);
+        else el.textContent = target;
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Load data
+    async function loadDashboard() {
+      var ok = await checkAuth();
+      if (!ok) return;
+
+      // Stats
+      try {
+        var res = await fetch('/api/admin/stats');
+        var json = await res.json();
+        if (json.success) {
+          animateCounter(document.getElementById('stat-events'), json.data.total_events);
+          animateCounter(document.getElementById('stat-bookings'), json.data.total_bookings);
+          animateCounter(document.getElementById('stat-seats'), json.data.total_seats_sold);
+        }
+      } catch(e) { console.error(e); }
+
+      // Events
+      try {
+        var res2 = await fetch('/api/admin/events');
+        var json2 = await res2.json();
+        document.getElementById('events-loading').style.display = 'none';
+
+        if (!json2.success || !json2.data || json2.data.length === 0) {
+          document.getElementById('events-empty').style.display = 'block';
+          return;
+        }
+
+        var events = json2.data;
+        var html = '<table class="data-table"><thead><tr>' +
+          '<th>#</th><th>Event Name</th><th>Date</th><th>Location</th><th>Seats</th><th>Bookings</th><th>Actions</th>' +
+          '</tr></thead><tbody>';
+
+        events.forEach(function(ev, i) {
+          html += '<tr>' +
+            '<td>' + (i+1) + '</td>' +
+            '<td style="font-weight:500; color:var(--text);">' + escapeHTML(ev.name) + '</td>' +
+            '<td>' + formatDate(ev.date) + '</td>' +
+            '<td>' + escapeHTML(ev.location) + '</td>' +
+            '<td>' + ev.available_seats + ' / ' + ev.total_seats + '</td>' +
+            '<td><span class="pill" style="font-size:0.78rem;">' + ev.booking_count + '</span></td>' +
+            '<td style="display:flex; gap:0.5rem; flex-wrap:wrap;">' +
+              '<a href="/admin/event.html?id=' + ev.id + '" class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem;">View</a>' +
+              '<button class="btn btn-danger" style="padding:0.35rem 0.75rem; font-size:0.8rem;" onclick="deleteEvent(' + ev.id + ',this)">Delete</button>' +
+            '</td></tr>';
+        });
+
+        html += '</tbody></table>';
+        document.getElementById('events-table-wrap').innerHTML = html;
+        document.getElementById('events-table-wrap').style.display = 'block';
+      } catch(e) {
+        document.getElementById('events-loading').style.display = 'none';
+        console.error(e);
+      }
+    }
+
+    async function deleteEvent(id, btn) {
+      if (!confirm('Delete this event and all its bookings?')) return;
+      btn.disabled = true;
+      btn.textContent = '...';
+      try {
+        var res = await fetch('/api/events/' + id, { method:'DELETE' });
+        var json = await res.json();
+        if (json.success) {
+          showToast('Event deleted.', 'success');
+          loadDashboard();
+        } else {
+          showToast(json.message || 'Failed to delete.', 'error');
+        }
+      } catch(e) {
+        showToast('Could not connect to server.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      }
+    }
+
+    function formatDate(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    }
+    function escapeHTML(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

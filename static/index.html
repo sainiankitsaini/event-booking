@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EventPass — Discover Amazing Events</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/js/toast.js" defer></script>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="url(#g1)" stroke-width="2"/><path d="M8 4v16M16 4v16" stroke="url(#g1)" stroke-width="1.5" stroke-dasharray="2 2"/><defs><linearGradient id="g1" x1="2" y1="4" x2="22" y2="20"><stop stop-color="#7c5cbf"/><stop offset="1" stop-color="#e8a838"/></linearGradient></defs></svg>
+      EventPass
+    </a>
+    <button class="hamburger" onclick="this.closest('.navbar').classList.toggle('nav-open')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <nav>
+      <a href="/">Events</a>
+      <a href="/admin/login.html">Admin</a>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <h1>Discover Amazing Events</h1>
+    <p>Browse upcoming events, book your passes, and create unforgettable experiences.</p>
+  </section>
+
+  <main class="container">
+    <!-- Skeleton loading -->
+    <div id="skeleton-grid" class="events-grid">
+      <div class="skeleton"><div class="skeleton-image"></div><div class="skeleton-text" style="margin-top:1rem;"></div><div class="skeleton-text short"></div><div class="skeleton-text short"></div></div>
+      <div class="skeleton"><div class="skeleton-image"></div><div class="skeleton-text" style="margin-top:1rem;"></div><div class="skeleton-text short"></div><div class="skeleton-text short"></div></div>
+      <div class="skeleton"><div class="skeleton-image"></div><div class="skeleton-text" style="margin-top:1rem;"></div><div class="skeleton-text short"></div><div class="skeleton-text short"></div></div>
+    </div>
+
+    <div id="events-grid" class="events-grid" style="display:none;"></div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <p>No events found yet.</p>
+      <a href="/admin/create.html" class="btn btn-primary">Create the first event</a>
+    </div>
+  </main>
+
+  <script>
+    const calendarIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const pinIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="2"/></svg>';
+    const arrowIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    async function loadEvents() {
+      const skeletonGrid = document.getElementById('skeleton-grid');
+      const grid = document.getElementById('events-grid');
+      const empty = document.getElementById('empty-state');
+
+      try {
+        const res = await fetch('/api/events');
+        const json = await res.json();
+
+        skeletonGrid.style.display = 'none';
+
+        if (!json.success) {
+          grid.style.display = 'grid';
+          grid.innerHTML = '<div class="empty-state"><p>Failed to load events.</p></div>';
+          return;
+        }
+
+        const events = json.data;
+        if (!events || events.length === 0) {
+          empty.style.display = 'block';
+          return;
+        }
+
+        grid.style.display = 'grid';
+        grid.innerHTML = events.map(function(event) {
+          var heroImg = event.images && event.images.length > 0
+            ? '/uploads/' + event.images[0]
+            : 'https://picsum.photos/seed/' + event.id + '/600/400';
+
+          var seatsBadge;
+          if (event.available_seats === 0) {
+            seatsBadge = '<span class="seats-red">Sold Out</span>';
+          } else if (event.available_seats < 5) {
+            seatsBadge = '<span class="seats-red">' + event.available_seats + ' seats left</span>';
+          } else if (event.available_seats < 20) {
+            seatsBadge = '<span class="seats-yellow">' + event.available_seats + ' seats left</span>';
+          } else {
+            seatsBadge = '<span class="seats-green">' + event.available_seats + ' / ' + event.total_seats + ' available</span>';
+          }
+
+          return '<div class="event-card">' +
+            '<div class="card-image"><img src="' + heroImg + '" alt="' + escapeHTML(event.name) + '" loading="lazy" /><div class="overlay"></div></div>' +
+            '<div class="card-body">' +
+              '<h3>' + escapeHTML(event.name) + '</h3>' +
+              '<div class="meta">' + calendarIcon + ' ' + formatDate(event.date) + '</div>' +
+              '<div class="meta">' + pinIcon + ' ' + escapeHTML(event.location) + '</div>' +
+              '<div class="seats-badge">' + seatsBadge + '</div>' +
+              '<a href="/event.html?id=' + event.id + '" class="card-link">View Event ' + arrowIcon + '</a>' +
+            '</div></div>';
+        }).join('');
+
+      } catch (err) {
+        skeletonGrid.style.display = 'none';
+        grid.style.display = 'grid';
+        grid.innerHTML = '<div class="empty-state"><p>Could not connect to server.</p></div>';
+        console.error(err);
+      }
+    }
+
+    function formatDate(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    }
+
+    function escapeHTML(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    loadEvents();
+  </script>
+</body>
+</html>
